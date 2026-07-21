@@ -1,0 +1,19 @@
+# Environnement virtuel
+venv/
+.venv/
+
+# Cache Python
+__pycache__/
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Variables d'environnement
+.env
+.env.*
+
+# Données sensibles ou volumineuses
+data/
+datasets/
+
+.ipynb_checkpoints/
