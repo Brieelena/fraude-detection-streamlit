@@ -4,7 +4,7 @@ import joblib
 from sklearn.model_selection import train_test_split
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.preprocessing import StandardScaler, LabelEncoder
-from sklearn.metrics import classification_report
+from sklearn.metrics import classification_report, roc_curve, auc
 
 # 1. Chargement avec le bon séparateur
 df = pd.read_csv("data/Bank_transaction_scenario1.csv", sep=";")
@@ -44,8 +44,21 @@ model.fit(X_train, y_train)
 y_pred = model.predict(X_test)
 print(classification_report(y_test, y_pred))
 
+# 7bis. Calcul et sauvegarde de la courbe ROC + importance des variables
+fpr, tpr, _ = roc_curve(y_test, model.predict_proba(X_test)[:, 1])
+roc_auc = auc(fpr, tpr)
+
+performance_data = {
+    "fpr": fpr,
+    "tpr": tpr,
+    "auc": roc_auc,
+    "feature_names": ["Montant", "Heure", "Localisation"],
+    "feature_importances": model.feature_importances_
+}
+joblib.dump(performance_data, "model/performance_data.pkl")
+
 # 8. Sauvegarde du modèle, du scaler ET de l'encodeur de localisation
 joblib.dump(model, "model/fraud_model.pkl")
 joblib.dump(scaler, "model/scaler.pkl")
 joblib.dump(le_localisation, "model/localisation_encoder.pkl")
-print("Modèle, Scaler et Encodeur entraînés et sauvegardés avec succès !")
+print("Modèle, Scaler, Encodeur et données de performance sauvegardés avec succès !")
