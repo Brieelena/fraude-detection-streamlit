@@ -3,7 +3,7 @@ import numpy as np
 import joblib
 from sklearn.model_selection import train_test_split
 from sklearn.ensemble import RandomForestClassifier
-from sklearn.preprocessing import StandardScaler
+from sklearn.preprocessing import StandardScaler, LabelEncoder
 from sklearn.metrics import classification_report
 
 # 1. Chargement avec le bon séparateur
@@ -12,41 +12,40 @@ df = pd.read_csv("data/Bank_transaction_scenario1.csv", sep=";")
 # Nettoyage des noms de colonnes
 df.columns = df.columns.str.strip()
 
-# 2. Suppression des colonnes non pertinentes pour le ML (ex: ID, Date si présente)
-# On retire toute colonne d'identifiant ou de date brute qui contient du texte unique
-colonnes_a_exclure = [col for col in df.columns if 'id' in col.lower() or 'date' in col.lower() or 'ref' in col.lower() or 'trans' in col.lower()]
-df = df.drop(columns=[col for col in colonnes_a_exclure if col in df.columns and col != 'Target'], errors='ignore')
-
-# 3. Encodage de la variable cible Target (Texte -> Nombre)
+# 2. Encodage de la variable cible Target (Texte -> Nombre)
 df['Target'] = df['Target'].apply(lambda x: 1 if str(x).strip() in ['Fraude', 'Suspect'] else 0)
 
-# 4. Séparation features / cible
-X = df.drop("Target", axis=1)
+# 3. Construction des 3 features utilisées par l'application Streamlit
+df["Date"] = pd.to_datetime(df["Date"])
+df["Heure"] = df["Date"].dt.hour
+
+le_localisation = LabelEncoder()
+df["Localisation_encoded"] = le_localisation.fit_transform(df["Localisation"])
+
+X = df[["Montant", "Heure", "Localisation_encoded"]]
 y = df["Target"]
 
-# 5. Encodage des colonnes catégorielles restantes (ex: Status operation, Localisation)
-X = pd.get_dummies(X, drop_first=True)
-
-# 6. Normalisation
+# 4. Normalisation
 scaler = StandardScaler()
 X_scaled = scaler.fit_transform(X)
 
-# 7. Split train/test
+# 5. Split train/test
 X_train, X_test, y_train, y_test = train_test_split(
     X_scaled, y, test_size=0.2, random_state=42, stratify=y
 )
 
-# 8. Entraînement
+# 6. Entraînement
 model = RandomForestClassifier(
     n_estimators=200, max_depth=10, class_weight="balanced", random_state=42
 )
 model.fit(X_train, y_train)
 
-# 9. Évaluation
+# 7. Évaluation
 y_pred = model.predict(X_test)
 print(classification_report(y_test, y_pred))
 
-# 10. Sauvegarde du modèle ET du scaler
+# 8. Sauvegarde du modèle, du scaler ET de l'encodeur de localisation
 joblib.dump(model, "model/fraud_model.pkl")
 joblib.dump(scaler, "model/scaler.pkl")
-print(" Modèle et Scaler entraînés et sauvegardés avec succès !")
+joblib.dump(le_localisation, "model/localisation_encoder.pkl")
+print("Modèle, Scaler et Encodeur entraînés et sauvegardés avec succès !")
